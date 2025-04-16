@@ -1,6 +1,6 @@
 # Covid-19 Case Statistic App (MATLAB App Designer)
 
-h用MATLAB App Designer將Covid-19的全球統計資料進行視覺化  
+用MATLAB App Designer將Covid-19的全球統計資料進行視覺化  
 使用MATLAB Online製作  
 
 ![image](https://github.com/user-attachments/assets/1f9cc74a-729f-4279-815b-a299dd7c298f)

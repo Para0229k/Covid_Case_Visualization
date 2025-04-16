@@ -34,7 +34,7 @@
 
 ![image](https://github.com/user-attachments/assets/f16e4f7c-05d2-4ddf-a26a-8b35fe77f7d5)
 
-資料來源：https://coronavirus.jhu.edu/map.tml  
+資料來源：https://coronavirus.jhu.edu/map.html  
 來自Johns Hopkins University的Coronavirus Resource Center  
 
 該檔案是一個大型cell array，包含按照國家(第一行)、地區(第二行)、日期(第一列)區分的病例(第一個元素)和死亡人數(第二個元素)

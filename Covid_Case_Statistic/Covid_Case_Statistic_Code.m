@@ -21,33 +21,35 @@ classdef Covid_Case_Statistic < matlab.apps.AppBase
 
     
     properties (Access = private)
-        covidData       % 添加Global後的原始數據
-        selectedCountryIndex   % 當前選擇的國家在原始數據中的Index
-        dateCell        % 全部日期的Cell                      
-        selectedDataCell    % 當前選擇的國家的所有Cell         
-        date            % 全部日期                          
-        caseNum         % 當前選擇的國家的所有case             
-        deathNum        % 當前選擇的國家的所有death             
-        countryIndexInListBox         % listBox中選擇的國家Index        
-        regionIndex     % 當前選擇的國家擁有的region的index   
-        selectedRegionIndex  %當前選擇的Region在原始數據中的Index
-        caseAverage     % Description
-        deathAverage    % Descriptionn
-        averagingWindow % Description
-        showCases       % Description
-        showDeathes     % Description
-        showCumulative  % Description
-        showDaily       % Description
+        covidData              % 添加Global後的原始數據
+        countryIdxInListBox    % Country list box中的所有國家Index 
+        selCountryIdx          % 使用者選擇的國家在原始數據中的Index    
+        date                   % 所有Date(Datetime型態)
+        dateTickIdx            % 要顯示在X軸的Date的Index
+        selDataCell            % 使用者選擇的國家的所有資料(Cell型態)   
+        caseCum                % 使用者選擇的國家的所有Case(Double型態, Cumulate形式)             
+        deathCum               % 使用者選擇的國家的所有Death(Double型態, Cumulate形式)                    
+        caseDaily              % 使用者選擇的國家的所有Case(Double型態, Daily形式)
+        deathDaily             % 使用者選擇的國家的所有Death(Double型態, Daily形式)
+        avgWindow              % 移動平均的取樣數                          
+        caseAvg                % 使用者選擇的國家的Case的平均值
+        deathAvg               % 使用者選擇的國家的Death的平均值             
+        regionIdx              % 使用者選擇的國家擁有的所有region的Index
+        selectedRegionIndex    % 使用者選擇的國家在當前選擇的Region在原始數據中的Index
     end
     
     methods (Access = private)
-        
+        % 初始化數據
         function Initialize_data(app)
+            % 讀取檔案
             load 'Covid DATA.mat' covid_data;
+            
+            % 計算全球統計數據
             allDataCell = covid_data(2:end, 3:end);
             globalCases = sum(cellfun(@(x) x(1), allDataCell));
             globalDeaths = sum(cellfun(@(x) x(2), allDataCell));
 
+            % 把Global放在第二列，組合成新數據
             app.covidData = covid_data;
             globalRow = cell(1, length(globalCases));
             for i = 3:size(covid_data, 2)
@@ -56,65 +58,135 @@ classdef Covid_Case_Statistic < matlab.apps.AppBase
             app.covidData = [covid_data(1,:); globalRow; covid_data(2:end,:)];
             app.covidData{2,1} = 'Global';
             app.covidData{2,2} = '';
+            fprintf("Data size = %d x %d\n", size(app.covidData));
         end
-
+        
+        % 在list box中顯示國家名稱
         function Show_country(app)
-            app.countryIndexInListBox = [];
+            app.countryIdxInListBox = [];
             for i=1:size(app.covidData, 1)
                 if isequal(app.covidData(i, 2), "")
-                    app.countryIndexInListBox = [app.countryIndexInListBox, i];
+                    app.countryIdxInListBox = [app.countryIdxInListBox, i];
                 end
             end
-            app.CountryListBox.Items = app.covidData(app.countryIndexInListBox, 1);
-            fprintf("# of country in list box = %d\n", size(app.countryIndexInListBox, 2));
+            app.CountryListBox.Items = app.covidData(app.countryIdxInListBox, 1);
+            fprintf("# of country in list box = %d\n\n", size(app.countryIdxInListBox, 2));
         end
 
+        % 計算每日數據
+        function Compute_daily(app)
+            app.caseDaily = diff([0, app.caseCum]);
+            app.caseDaily(app.caseDaily < 0) = 0;
+            app.deathDaily = diff([0, app.deathCum]);
+            app.deathDaily(app.deathDaily < 0) = 0;
+        end
+
+        % 計算平均數據
         function Compute_average(app)
-            app.caseAverage = movmean(app.caseNum, app.averagingWindow);
-            app.deathAverage = movmean(app.deathNum, app.averagingWindow);
+            if app.CumulativeButton.Value
+                app.caseAvg = movmean(app.caseCum, [app.avgWindow-1 0]);
+                app.deathAvg = movmean(app.deathCum, [app.avgWindow-1 0]);
+            else
+                app.caseAvg = movmean(app.caseDaily, [app.avgWindow-1 0]);
+                app.deathAvg = movmean(app.deathDaily, [app.avgWindow-1 0]);
+            end
         end
-
-        function Plot_data(app)
-            % Show title
+        
+        % 繪製標題
+        function Plot_title(app)
+            % 讀取當前圖表狀況
+            option = app.OptionButtonGroup.SelectedObject.Text;
+            data = app.DatatoPlotButtonGroup.SelectedObject.Text;
             location = app.CountryListBox.Value;
             region = app.StateorRegionListBox.Value;
-
+            
+            % 處理資料種類
+            if isequal(data, 'Both')
+                data = 'Cases and Deaths';
+            end
+            
+            % 處理地區
             if isequal(location, 'Global')
-                location = 'Globally';
+                location = ' Globally';
             elseif isequal(region, 'All')
-                location = ['in ', location];
+                location = [' in ', location];
             else
-                location = ['in ', region];
+                location = [' in ', region];
             end
             
-            app.UIAxes.Title.String = ['Cumulative Number of Cases ', location];
-
-            % Plot data
-            cla(app.UIAxes);
-            
-            switch app.DatatoPlotButtonGroup.SelectedObject
-                case app.CasesButton
-                    bar(app.UIAxes, app.date, app.caseNum, 'blue');
-                case app.DeathsButton
-                    plot(app.UIAxes, app.date, app.deathNum, 'red');
-                otherwise
-                    bar(app.UIAxes, app.date, app.caseNum, 'blue');
-                    hold(app.UIAxes, 'on');
-                    plot(app.UIAxes, app.date, app.deathNum, 'red');
-                    hold(app.UIAxes, 'off');
-
-            %switch app.DatatoPlotButtonGroup.SelectedObject
-            %    case app.CasesButton
-            %        bar(app.UIAxes, app.date, app.caseAverage, 'blue');
-            %    case app.DeathsButton
-            %        plot(app.UIAxes, app.date, app.deathAverage, 'red');
-            %    otherwise
-            %        bar(app.UIAxes, app.date, app.caseAverage, 'blue');
-            %        hold(app.UIAxes, 'on');
-            %        plot(app.UIAxes, app.date, app.deathAverage, 'red');
-            %        hold(app.UIAxes, 'off');
+            % 處理平均數
+            if isequal(app.avgWindow, 1)
+                average = '';
+            else
+                average = [' (', num2str(app.avgWindow), '-day mean)'];
             end
+            
+            % 組裝成標題
+            app.UIAxes.Title.String = [option, ' Number of ', data, location, average];
+        end
+
+        % 繪製圖表
+        function Plot_data(app)
+            % 重製整張圖表
+            reset(app.UIAxes);
+            
+            % 設定顏色
+            red = [0.7 0.3 0.4];
+            blue = [0.2 0.4 0.7];
+            gray = [0.15 0.15 0.15];
+
+            % 繪製數據
+            if app.CasesButton.Value
+                bar(app.UIAxes, app.date, app.caseAvg, 'FaceColor', blue);
+            elseif app.DeathsButton.Value
+                plot(app.UIAxes, app.date, app.deathAvg, 'Color', red);
+            else
+                yyaxis(app.UIAxes, 'left');
+                bar(app.UIAxes, app.date, app.caseAvg, 'FaceColor', blue);
+                hold(app.UIAxes, 'on');
+
+                yyaxis(app.UIAxes, 'right');
+                plot(app.UIAxes, app.date, app.deathAvg, 'Color',red);
+                hold(app.UIAxes, 'off');
+            end
+
+            % Y座標軸設定
+            if app.BothButton.Value
+                yyaxis(app.UIAxes, 'left');
+                app.UIAxes.YColor = blue;
+                app.UIAxes.YAxis(1).Exponent = 0;
+                ytickformat(app.UIAxes, '%,.0f');
+
+                yyaxis(app.UIAxes, 'right');
+                app.UIAxes.YColor = red;
+                app.UIAxes.YAxis(2).Exponent = 0;
+                ytickformat(app.UIAxes, '%,.0f');
+            else
+                app.UIAxes.YColor = gray;
+                app.UIAxes.YAxis.Exponent = 0;
+                ytickformat(app.UIAxes, '%,.0f');
+            end
+
+            % X座標軸設定
+            app.UIAxes.XTick = app.date(app.dateTickIdx);
+            xtickformat(app.UIAxes, 'MMM dd');
+            app.UIAxes.XAxis.SecondaryLabel.Visible = 'off';
+            
+            % 格線、外框設定
+            grid(app.UIAxes, "on");
+            box(app.UIAxes, 'off');
+
+            % 更新標題
+            app.Plot_title();
+
             drawnow;
+        end
+        
+        
+        function Search_data(app)
+            app.selDataCell = app.covidData(app.selCountryIdx, 3:end);
+            app.caseCum = cellfun(@(x) x(1), app.selDataCell);
+            app.deathCum = cellfun(@(x) x(2), app.selDataCell);
         end
     end
     
@@ -124,80 +196,101 @@ classdef Covid_Case_Statistic < matlab.apps.AppBase
 
         % Code that executes after component creation
         function startupFcn(app)
+            % 初始化數據、畫面
             app.Initialize_data();
             app.Show_country();
-            app.selectedCountryIndex = 2;
-            
+            app.selCountryIdx = 2;
             app.StateorRegionListBox.Items = "All";
             
-            app.dateCell = app.covidData(1, 3:end);
-            app.date = datetime(app.dateCell, Format="MM/dd");
+            % 提取Date數據(X軸)
+            app.date = datetime(app.covidData(1, 3:end));
+            app.dateTickIdx = 1:round((size(app.date, 2)/8)):size(app.date, 2);
             
-            app.selectedDataCell = app.covidData(app.selectedCountryIndex, 3:end);
-            app.caseNum = cellfun(@(x) x(1), app.selectedDataCell);
-            app.deathNum = cellfun(@(x) x(2), app.selectedDataCell);
+            % 提取Case, Death數據(Y軸)
+            app.Search_data();
             
-            app.averagingWindow = app.AveragedofdaysSlider.Value;
-            app.averagingWindow = 30;
-
-            %app.showCases = app.CasesButton.Value || app.BothButton.Value;
-            %app.showDeathes = app.DeathsButton.Value || app.BothButton.Value;
-            %app.showCumulative = app.CumulativeButton.Value;
-            %app.showDaily = app.DailyButton.Value;
-            
-            %app.Compute_average();
+            % 計算每日、平均並繪圖
+            app.Compute_daily();
+            app.avgWindow = app.AveragedofdaysSlider.Value;
+            app.Compute_average();
             app.Plot_data();
         end
 
         % Value changed function: CountryListBox
         function CountryListBoxValueChanged(app, event)
-            % Change value
-            selectedIndexInListBox = app.CountryListBox.ValueIndex;
-            app.selectedCountryIndex = app.countryIndexInListBox(selectedIndexInListBox);
-            fprintf("Selected country index = %d\n", app.selectedCountryIndex);
+            % 找到選擇的國家在原始資料的Index
+            selIdxInListBox = app.CountryListBox.ValueIndex;
+            app.selCountryIdx = app.countryIdxInListBox(selIdxInListBox);
+            fprintf("Selected country index = %d\n", app.selCountryIdx);
 
-            % Show state & region
-            tempCountry = app.selectedCountryIndex+1;
-            app.regionIndex = [];
+            % 顯示對應的State or Region
+            tempCountry = app.selCountryIdx + 1;
+            app.regionIdx = [];
             if tempCountry <= size(app.covidData, 1) && isequal(app.covidData(tempCountry, 2), "")
                 app.StateorRegionListBox.Items = "All";
             else
                 while tempCountry <= size(app.covidData, 1) && ~isequal(app.covidData(tempCountry, 2), "")
-                    app.regionIndex = [app.regionIndex, tempCountry];
+                    app.regionIdx = [app.regionIdx, tempCountry];
                     tempCountry = tempCountry + 1;
                 end
-                regionListBoxItems = [{'All'}; app.covidData(app.regionIndex, 2)]; 
+                regionListBoxItems = [{'All'}; app.covidData(app.regionIdx, 2)]; 
                 app.StateorRegionListBox.Items = regionListBoxItems;    
             end
 
-            % Draw data
-            app.selectedDataCell = app.covidData(app.selectedCountryIndex, 3:end);
-            app.caseNum = cellfun(@(x) x(1), app.selectedDataCell);
-            app.deathNum = cellfun(@(x) x(2), app.selectedDataCell);
-            %app.Compute_average
-            app.Plot_data;
-            fprintf("Country : %s\n", app.CountryListBox.Value);
-            fprintf("Region : %s\n\n", app.StateorRegionListBox.Value);
+            % 提取Case, Death數據
+            app.Search_data();
+            
+            % 計算每日、平均並繪圖
+            app.Compute_daily();
+            app.Compute_average();
+            app.Plot_data();
+            fprintf("Country changed to : %s\n\n", app.CountryListBox.Value);
         end
 
         % Value changed function: StateorRegionListBox
         function StateorRegionListBoxValueChanged(app, event)
-            % Change value
-            selectedIndexInListBox = app.StateorRegionListBox.ValueIndex;
-            if selectedIndexInListBox == 1
-                app.selectedRegionIndex = app.selectedCountryIndex;
-            else
-                app.selectedRegionIndex = app.regionIndex(selectedIndexInListBox-1);
+            % 找到選擇的地區在原始資料的Index
+            selIdxInListBox = app.StateorRegionListBox.ValueIndex;
+            if selIdxInListBox ~= 1
+                app.selCountryIdx = app.regionIdx(selIdxInListBox-1);
             end
-            fprintf("Selected region index = %d\n", app.selectedRegionIndex);
+            fprintf("Selected region index = %d\n", app.selCountryIdx);
             
-            % Draw data
-            app.selectedDataCell = app.covidData(app.selectedRegionIndex, 3:end);
-            app.caseNum = cellfun(@(x) x(1), app.selectedDataCell);
-            app.deathNum = cellfun(@(x) x(2), app.selectedDataCell);
-            %app.Compute_average
+            % 提取Case, Death數據
+            app.Search_data();
+            
+            % 計算每日、平均並繪圖
+            app.Compute_daily();
+            app.Compute_average();
             app.Plot_data;
             fprintf("Region changed to : %s\n\n", app.StateorRegionListBox.Value);
+        end
+
+        % Selection changed function: DatatoPlotButtonGroup
+        function DatatoPlotButtonGroupSelectionChanged(app, event)
+            % 重新繪圖
+            app.Compute_daily();
+            app.Compute_average();
+            app.Plot_data();
+        end
+
+        % Selection changed function: OptionButtonGroup
+        function OptionButtonGroupSelectionChanged(app, event)
+            % 重新繪圖
+            app.Compute_daily();
+            app.Compute_average();
+            app.Plot_data();
+        end
+
+        % Value changed function: AveragedofdaysSlider
+        function AveragedofdaysSliderValueChanged(app, event)
+            % 改變Average window的值
+            app.avgWindow = round(app.AveragedofdaysSlider.Value);
+            
+            % 重新繪圖
+            app.Compute_daily();
+            app.Compute_average();
+            app.Plot_data();
         end
     end
 
@@ -215,6 +308,9 @@ classdef Covid_Case_Statistic < matlab.apps.AppBase
             % Create UIAxes
             app.UIAxes = uiaxes(app.UIFigure);
             title(app.UIAxes, 'Cumulative Number of Cases Globally')
+            app.UIAxes.GridAlpha = 0.05;
+            app.UIAxes.XGrid = 'on';
+            app.UIAxes.YGrid = 'on';
             app.UIAxes.Position = [38 207 526 342];
 
             % Create CountryListBoxLabel
@@ -250,11 +346,13 @@ classdef Covid_Case_Statistic < matlab.apps.AppBase
             % Create AveragedofdaysSlider
             app.AveragedofdaysSlider = uislider(app.UIFigure);
             app.AveragedofdaysSlider.Limits = [1 15];
+            app.AveragedofdaysSlider.ValueChangedFcn = createCallbackFcn(app, @AveragedofdaysSliderValueChanged, true);
             app.AveragedofdaysSlider.Position = [424 191 150 3];
             app.AveragedofdaysSlider.Value = 1;
 
             % Create DatatoPlotButtonGroup
             app.DatatoPlotButtonGroup = uibuttongroup(app.UIFigure);
+            app.DatatoPlotButtonGroup.SelectionChangedFcn = createCallbackFcn(app, @DatatoPlotButtonGroupSelectionChanged, true);
             app.DatatoPlotButtonGroup.Title = 'Data to Plot';
             app.DatatoPlotButtonGroup.Position = [355 31 100 105];
 
@@ -262,6 +360,7 @@ classdef Covid_Case_Statistic < matlab.apps.AppBase
             app.CasesButton = uiradiobutton(app.DatatoPlotButtonGroup);
             app.CasesButton.Text = 'Cases';
             app.CasesButton.Position = [11 59 58 22];
+            app.CasesButton.Value = true;
 
             % Create DeathsButton
             app.DeathsButton = uiradiobutton(app.DatatoPlotButtonGroup);
@@ -272,10 +371,10 @@ classdef Covid_Case_Statistic < matlab.apps.AppBase
             app.BothButton = uiradiobutton(app.DatatoPlotButtonGroup);
             app.BothButton.Text = 'Both';
             app.BothButton.Position = [11 15 65 22];
-            app.BothButton.Value = true;
 
             % Create OptionButtonGroup
             app.OptionButtonGroup = uibuttongroup(app.UIFigure);
+            app.OptionButtonGroup.SelectionChangedFcn = createCallbackFcn(app, @OptionButtonGroupSelectionChanged, true);
             app.OptionButtonGroup.Title = 'Option';
             app.OptionButtonGroup.Position = [474 31 100 105];
 

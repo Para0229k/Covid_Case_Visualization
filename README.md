@@ -1,4 +1,4 @@
-# COVID-19 Case Statistic App（OOP Version）
+# COVID-19 Case Visualization App（OOP Version）
 
 用MATLAB製作的COVID-19疫情資料視覺化應用  
 以App Designer建立互動式圖形介面，使用物件導向架構（OOP）設計資料結構  
@@ -20,27 +20,14 @@
 ## 1. 檔案結構
 
 ```bash
-Covid_Case_Statistic_OOP/
-├── Covid_Case_Statistic.mlapp        # 主程式介面與事件控制（App Designer）
+Covid_Case_Visualization/
+├── Covid DATA.mat                    # 原始疫情統計資料（每日確診、死亡數）
+├── Covid_Case_Statistic.mlapp        # 主程式介面與事件控制（MATLAB App）
 ├── Covid_Case_Statistic_code.m       # 為Github展示.mlapp中程式碼之對應版本
-├── Global_data.m                     # 定義OOP架構：Global > Country > Region
-├── Covid DATA.mat                    # 疫情統計原始資料（含每日確診、死亡數）
+└── Global_data.m                     # 定義OOP架構：Global > Country > Region
+
 ```
 > [點此下載完整專案檔案](https://drive.google.com/drive/folders/1s-ahcmWuNj28gGe-XnjFN7_mTLU6lVp7?usp=sharing)
-
-### 模組互動流程圖（by Mermaid）
-
-```mermaid
-graph TD
-    RAW[Covid DATA.mat<br>原始疫情統計資料]
-    DATA[Global_data.m<br>OOP 結構與統計資料封裝]
-    UI[Covid_Case_Statistic.mlapp<br>圖形介面設計 + UI 互動]
-    CODE[Covid_Case_Statistic_code.m<br>程式碼展示]
-    
-    RAW --> DATA
-    DATA --> UI
-    UI --> CODE
-```
 
 ---
 
@@ -57,36 +44,38 @@ graph TD
 ## 3. 主要功能
 
 |   功能類型    |                  說明                     |
-|:-----------:|--------------------------------------------|
-|國家/地區切換|使用下拉選單切換不同區域的疫情資料              |
-|統計類型切換|選擇每日新增或累積數據顯示（Case / Death / Both）|
-|移動平均顯示|顯示指定天數的移動平均線，平滑資料變化趨勢        |
-|雙軸圖表支援|同時顯示確診與死亡數據，以不同y軸呈現             |
-|動態標題    |根據使用者選擇自動調整圖表標題與顯示樣式          |
-|物件導向設計|使用 Global > Country > Region 結構封裝資料     |
+|-----------|--------------------------------------------|
+|**國家/地區切換**|使用下拉選單切換不同區域的疫情資料              |
+|**統計類型切換**|選擇每日新增或累積數據顯示（Case / Death / Both）|
+|**移動平均顯示**|顯示指定天數的移動平均線，平滑資料變化趨勢        |
+|**雙軸圖表支援**|同時顯示確診與死亡數據，以不同y軸呈現             |
+|**動態標題**    |根據使用者選擇自動調整圖表標題與顯示樣式          |
+|**物件導向設計**|使用 Global > Country > Region 結構封裝資料     |
 
 ### 介面說明
 
 ![044412F5-5AC0-4D5F-A2F8-729E6C33913A](https://github.com/user-attachments/assets/2a26109f-e80f-40ec-a119-151bd194c29e)
 
-- **Graph**：根據其他選項改變繪製資料、標題、繪製方式
-- **Country**：選擇繪製不同國家的資料，預設為Global
-- **State of Region**：若選擇的國家有提供地區資料則顯示選項，選擇後只顯示該地區的資料，預設為All
-- **Averaged # of days**：改變滑動平均的取樣數，取樣方式為自己+前N-1天，預設為1(不平均)
-- **Data to Plot**：選擇要顯示的資料，預設為Cases
-- **Option**：選擇資料顯示的形式，預設為Cumulative
+|區塊|說明|
+|----------------------|------------------------------------|
+|**Graph**             |根據其他選項改變繪製資料、標題、繪製方式|
+|**Country**           |選擇繪製不同國家的資料，預設為Global|
+|**State of Region**   |若選擇的國家有提供地區資料則顯示選項，選擇後只顯示該地區的資料，預設為All|
+|**Averaged # of days**|改變滑動平均的取樣數，取樣方式為自己+前N-1天，預設為1(不平均)|
+|**Data to Plot**      |選擇要顯示的資料，預設為Cases|
+|**Option**            |選擇資料顯示的形式，預設為Cumulative|
 
 ---
 
 ## 4. 未來延伸方向
 
-| 延伸項目       | 說明                       |
-| :----------: | ------------------------ |
-| 搜尋功能     | 讓使用者直接搜尋國家           |
-| 地圖顯示功能     | 加入地圖式呈現地區疫情熱度            |
-| 匯出功能       | 匯出圖表為 PNG / PDF |
-| Start & Stop | 讓使用者選取X顯示範圍         |
-| 單一地區長期觀測模式 | 支援時間軸回放、長期趨勢分析           |
+|延伸項目|說明|
+|----------| ------------------------ |
+|**搜尋功能**            | 讓使用者直接搜尋國家           |
+|**地圖顯示功能**         | 加入地圖式呈現地區疫情熱度            |
+|**匯出功能**            | 匯出圖表為 PNG / PDF |
+|**Start & Stop**       | 讓使用者選取X顯示範圍         |
+|**單一地區長期觀測模式**| 支援時間軸回放、長期趨勢分析           |
 
 ---
 
@@ -110,11 +99,11 @@ graph TD
 
 ## 6. 版本紀錄
 
-| 版本   | 說明                         |
-| ---- | -------------------------- |
-| v1.0 | 初版發布，使用cell array與陣列繪製資料 |
-| v2.0 | 完成移動平均拉桿、資料選取按鈕、繪製方式按鈕、動態標題、雙座標軸|
-| v2.0 | 整合 OOP 與 GUI，重構資料呼叫邏輯     |
+|版本|說明|
+|----|-------------------------- |
+|v1.0|初版發布，使用cell array與陣列繪製資料|
+|v2.0|完成移動平均拉桿、資料選取按鈕、繪製方式按鈕、動態標題、雙座標軸|
+|v2.1|整合 OOP 與 GUI，重構資料呼叫邏輯|
 
 ---
 
